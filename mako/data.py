@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Sequence
+from typing import Literal, Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -66,7 +66,7 @@ class WSIBagDataset(Dataset):
 
 class InMemoryWSIBagDataset(Dataset):
     """
-    A PyTorch Dataset for whole slide image (WSI) feature bags, where all data is preloaded into memory.
+    A PyTorch Dataset for whole slide image (WSI) feature bags, where all bags are preloaded into memory.
 
     This dataset preloads all feature bags into memory to speed up access. Each item consists of a
     2D tensor of shape `(num_patches, num_features)`, representing extracted WSI features, along
@@ -76,8 +76,17 @@ class InMemoryWSIBagDataset(Dataset):
     ----------
     feature_paths : Sequence[Path | str]
         A list of file paths to the feature tensors.
-    labels : npt.NDArray
-        A NumPy array containing labels corresponding to each feature bag.
+    labels : array-like
+        An array-like object containing labels corresponding to each feature bag. If
+        using this object for classification tasks, pass in a 1D vector of labels, where
+        each labels an integer greater than or equal to 0. If using this for regression
+        tasks, pass in a 2D matrix of labels, where each row contains the regression
+        label(s) for each whole slide image.
+    task : str
+        Specifies whether the dataset is for classification or regression. The only
+        available options are "classification" and "regression".
+    verbose : bool, optional
+        If True, print dataset initialization details.
 
     Attributes
     ----------
@@ -93,27 +102,44 @@ class InMemoryWSIBagDataset(Dataset):
         self,
         feature_paths: Sequence[Path | str],
         labels: npt.NDArray,
+        task: Literal["classification", "regression"],
+        verbose: bool = True,
     ):
         self.feature_paths = [Path(p) for p in feature_paths]
         self.labels = np.asarray(labels)
-        assert len(labels) == len(feature_paths)
+        self.task = task
+        self.verbose = verbose
+
+        if self.task not in {"classification", "regression"}:
+            raise ValueError(f"Unknown task '{task}'.")
+
+        if len(labels) != len(feature_paths):
+            raise ValueError("Number of feature paths must equal the number of labels.")
+
+        if self.task == "regression" and self.labels.ndim != 2:
+            raise ValueError(f"Expected 2-dim tensor but got {self.labels.ndim}-dim")
+        elif self.task == "classification" and self.labels.ndim != 1:
+            raise ValueError(f"Expected 1-dim tensor but got {self.labels.ndim}-dim")
 
         for p in self.feature_paths:
             assert p.exists(), f"Path not found: {p}"
 
-        print("Initialized a dataset:")
-        print(f"    N feature paths: {len(feature_paths)}")
-        print(f"    Shape of labels: {labels.shape}")
+        if self.verbose:
+            print("Initialized a dataset:")
+            print(f"    N feature paths: {len(feature_paths)}")
+            print(f"    Shape of labels: {labels.shape}")
+            print("Loading bags into memory...")
 
-        print("Loading bags into memory...")
         self.bags: list[torch.Tensor] = thread_map(
             lambda p: torch.load(p, map_location="cpu"),
             self.feature_paths,
             max_workers=10,
         )
-        print("Done loading bags into memory.")
-        num_bytes = sum(t.element_size() * t.numel() for t in self.bags)
-        print(f"    {num_bytes / 1e9:0.2f} gigabytes")
+
+        if self.verbose:
+            print("Done loading bags into memory.")
+            num_bytes = sum(t.element_size() * t.numel() for t in self.bags)
+            print(f"    {num_bytes / 1e9:0.2f} gigabytes")
 
     def __len__(self):
         return len(self.bags)
@@ -123,7 +149,12 @@ class InMemoryWSIBagDataset(Dataset):
         features = features.float()
         label = torch.tensor(self.labels[index])
 
-        assert features.ndim == 2, f"Expected 2-dim tensor but got {features.ndim}-dim"
-        assert label.ndim == 1, f"Expected 1-dim tensor but got {label.ndim}-dim"
+        if features.ndim != 2:
+            raise ValueError(f"Expected 2-dim tensor but got {features.ndim}-dim")
+
+        if self.task == "regression" and self.labels.ndim != 1:
+            raise ValueError(f"Expected 1-dim tensor but got {self.labels.ndim}-dim")
+        elif self.task == "classification" and self.labels.ndim != 0:
+            raise ValueError(f"Expected 0-dim tensor but got {self.labels.ndim}-dim")
 
         return features, label
