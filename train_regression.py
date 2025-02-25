@@ -253,7 +253,7 @@ def evaluate(
         x = x.squeeze(0)
 
         assert y.shape == (1, state.num_classes)
-        all_y.append(y[0].detach().cpu().numpy().tolist())
+        all_y.append(y[0].detach().cpu().numpy().tolist())  # type: ignore
 
         # Transfer to GPU (if it's available).
         x = x.to(state.device, non_blocking=True)
@@ -264,7 +264,7 @@ def evaluate(
 
         # Calculate loss.
         assert y_hat.shape == y.shape
-        all_y_hat.append(y_hat[0].detach().cpu().numpy().tolist())
+        all_y_hat.append(y_hat[0].detach().cpu().numpy().tolist())  # type: ignore
         loss = F.mse_loss(input=y_hat, target=y, reduction="none")
         assert loss.shape == (1, state.num_classes)
 

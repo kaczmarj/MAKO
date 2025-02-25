@@ -194,9 +194,10 @@ def train_one_epoch(
         auroc_weighted_fn(y_hat.cpu(), y.detach().cpu())
         f1_fn(y_hat.cpu(), y.detach().cpu())
 
-    auroc_all = auroc_all_fn.compute().cpu().numpy()  # shape: (num_classes,)
-    auroc: float = auroc_weighted_fn.compute().cpu().numpy().item()
-    f1: float = f1_fn.compute().cpu().numpy().item()
+    # shape: (num_classes,)
+    auroc_all = auroc_all_fn.compute().cpu().numpy()  # type: ignore
+    auroc: float = auroc_weighted_fn.compute().cpu().numpy().item()  # type: ignore
+    f1: float = f1_fn.compute().cpu().numpy().item()  # type: ignore
 
     results = {
         "mean_loss": total_loss / len(state.loader_train),
@@ -266,8 +267,8 @@ def evaluate(
         assert y_hat.shape[0] == 1
         assert y_hat.shape[1] == state.num_classes
 
-        all_y.append(y.cpu().numpy().item())
-        all_y_hat.append(y_hat.squeeze(0).cpu().numpy().tolist())
+        all_y.append(y.cpu().numpy().item())  # type: ignore
+        all_y_hat.append(y_hat.squeeze(0).cpu().numpy().tolist())  # type: ignore
 
         loss = loss_fn(input=y_hat, target=y)
 
@@ -281,9 +282,9 @@ def evaluate(
         f1_fn(y_hat.cpu(), y.detach().cpu())
 
     # shape: (num_classes,)
-    auroc_all: list[float] = auroc_all_fn.compute().cpu().numpy().tolist()
-    auroc: float = auroc_weighted_fn.compute().cpu().numpy().item()
-    f1: float = f1_fn.compute().cpu().numpy().item()
+    auroc_all: list[float] = auroc_all_fn.compute().cpu().numpy().tolist()  # type: ignore
+    auroc: float = auroc_weighted_fn.compute().cpu().numpy().item()  # type: ignore
+    f1: float = f1_fn.compute().cpu().numpy().item()  # type: ignore
 
     results = {
         "mean_loss": total_loss / len(loader),
