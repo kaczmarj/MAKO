@@ -554,7 +554,7 @@ def main(
     assert not df_val.empty
     df_test = df.loc[df[case_id_colname].isin(patient_ids_test), :].copy()
     assert not df_test.empty
-    df[label_col].nunique() == num_classes
+    assert df[label_col].nunique() == num_classes
     del df
 
     # Panic if any labels are NA.
