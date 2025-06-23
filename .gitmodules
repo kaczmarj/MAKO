@@ -1,0 +1,3 @@
+[submodule "CLAM"]
+	path = CLAM
+	url = https://github.com/kaczmarj/CLAM
