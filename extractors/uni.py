@@ -123,7 +123,7 @@ def main(
     slide_ids: Optional[Sequence[str]] = None,
 ):
     print("-" * 40)
-    print("Extracting features with UNI2-h")
+    print("Extracting features with UNI")
     print("=" * 40)
     print("Arguments")
     print(f"  {wsi_dir=}")
